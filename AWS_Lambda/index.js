@@ -19,28 +19,28 @@
  * Automatic and forward the message to Smartthings
  */
 exports.handler = (event, context, callback) => {    
-    var msg = JSON.parse(event.body);
-    
-    var request = require('request');
-    var options = {
-	  url: process.env.ss_apiuri + 'automatic',
-	  headers: {
-        Authorization: 'Bearer ' + process.env.ss_token
-      },
-	  json: {
-	    deviceNetworkId: msg.vehicle.id,
-        type: msg.type,
-	    location: msg.location,
-	    vehicle: msg.vehicle,
-	    trip: msg.trip
-	  }
+	var msg = JSON.parse(event.body);
+
+	var request = require('request');
+	var options = {
+		url: process.env.ss_apiuri + 'automatic',
+		headers: {
+			Authorization: 'Bearer ' + process.env.ss_token
+		},
+		json: {
+			deviceNetworkId: msg.vehicle.id,
+			type: msg.type,
+			location: msg.location,
+			vehicle: msg.vehicle,
+			trip: msg.trip
+		}
 	};
-		
+
 	request.post(options, function optionalCallback(err, httpResponse, body) {
-        if (err) {
-            return callback(err);
-        }
+		if (err) {
+			return callback(err);
+		}
 	});
-    
-    callback(null, 'Hello from Lambda');
+
+	callback(null, 'Hello from Lambda');
 };

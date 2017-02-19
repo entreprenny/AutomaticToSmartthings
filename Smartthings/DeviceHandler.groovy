@@ -18,7 +18,6 @@ metadata {
 	definition (name: "Automatic", namespace: "randymxj", author: "Xiaojing Ma") {
 		capability "Presence Sensor"
 		capability "Sensor"
-        capability "Refresh"
         
         attribute "label", "string"
         attribute "distance", "number"
@@ -47,9 +46,6 @@ metadata {
         valueTile("voltage", "device.voltage", decoration: "flat", width: 1, height: 1) {
             state("default", label:'Voltage ${currentValue} V')
         }
-        standardTile("refresh", "device.presence", decoration: "flat", width: 1, height: 1) {
-			state("icon", action:"refresh.refresh", icon:"st.secondary.refresh")
-		}
         valueTile("mpg", "device.mpg", decoration: "flat", width: 1, height: 1) {
             state("default", label:'MPG ${currentValue}')
         }
@@ -73,12 +69,12 @@ def updatePresence(map) {
     // trip
     def trip = map.trip
     // Home location
-	def myLat = 42.349208
-    def myLon = -71.106220
+	def myLat = 42.459984
+    def myLon = -71.20599
     // Distance from home
     def distance = getDistance(map.location.lat, map.location.lon, myLat, myLon);
     
-	def presence = (distance < 1 && (type == "trip:finished" || type == "ignition:off")) ? "present" : "not present"        
+	def presence = (distance > 1 || type == "ignition:on") ? "not present" : "present"        
 	def linkText = getLinkText(device)
 	def isPresenceChange = isStateChange(device, "presence", presence)
         
@@ -121,39 +117,19 @@ def updatePresence(map) {
         }
     }
     
+    // Status Report
+    if (type == "vehicle:status_report") {
+    	sendEvent(name: "fule", value: vehicle.fuel_level_percent)
+        sendEvent(name: "voltage", value: vehicle.battery_voltage)
+    }
+    
     // Trip
     if (trip) {
-    	sendEvent(name: "mpg", value: trip.average_mpg)
+    	sendEvent(name: "mpg", value: Math.round(trip.average_mpg * 100.0) / 100.0)
         sendEvent(name: "location", value: trip.end_location.display_name)
     }
-    
-    refresh()
-    
+        
 	return null
-}
-
-def refresh() {
-	log.debug "Automatic: Refreshing"
-    
-    def carID = device.deviceNetworkId
-    def auth = "Automatic RESTful API auth Token"
-
-    def params = [
-        uri: "https://api.automatic.com/vehicle/$carID/",
-        headers: [
-        	Authorization: "Bearer $auth"
-        ]
-    ]
-    
-    try {
-        httpGet(params) { resp ->            
-            sendEvent(name: "fule", value: resp.data.fuel_level_percent)
-            sendEvent(name: "voltage", value: resp.data.battery_voltage)
-        }
-    } catch (e) {
-        log.error "something went wrong: $e"
-    }
-
 }
 
 private parseDescriptionText(String linkText, String value) {
@@ -165,13 +141,13 @@ private parseDescriptionText(String linkText, String value) {
 }
 
 private getDistance(lat1, lon1, lat2, lon2) {
-	def R = 6371;
+	def R = 6371
     
-    def latDistance = Math.toRadians(lat2 - lat1);
-    def lonDistance = Math.toRadians(lon2 - lon1);
-    def a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2) + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
-    def c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    def distance = R * c;
+    def latDistance = Math.toRadians(lat2 - lat1)
+    def lonDistance = Math.toRadians(lon2 - lon1)
+    def a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2) + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2)
+    def c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    def distance = R * c
     
-    return Math.round(distance * 100.0) / 100.0;
+    return Math.round(distance * 100.0) / 100.0
 }
